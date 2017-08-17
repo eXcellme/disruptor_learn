@@ -52,6 +52,7 @@ repositories {
 
 dependencies {
     testCompile 'junit:junit:4.12'
+    testCompile group: 'com.google.guava', name: 'guava', version: '23.0'
     perfCompile 'org.hdrhistogram:HdrHistogram:1.2.1'
 }
 

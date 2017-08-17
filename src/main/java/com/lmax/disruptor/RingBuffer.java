@@ -56,7 +56,7 @@ abstract class RingBufferFields<E> extends RingBufferPad
     private final long indexMask;
     private final Object[] entries;
     protected final int bufferSize;
-    protected final Sequencer sequencer;
+    protected final Sequencer sequencer; // 生产者序列号
 
     RingBufferFields(
         EventFactory<E> eventFactory,
@@ -69,13 +69,13 @@ abstract class RingBufferFields<E> extends RingBufferPad
         {
             throw new IllegalArgumentException("bufferSize must not be less than 1");
         }
-        if (Integer.bitCount(bufferSize) != 1)
+        if (Integer.bitCount(bufferSize) != 1) // Integer.bigCount返回一个整数的二进制形式中1的数量，如Integer.bigCount(128)，就是判断10000000中1的数量。这里用于判断给定bufferSize是否是2的平方
         {
             throw new IllegalArgumentException("bufferSize must be a power of 2");
         }
 
         this.indexMask = bufferSize - 1;
-        this.entries = new Object[sequencer.getBufferSize() + 2 * BUFFER_PAD];
+        this.entries = new Object[sequencer.getBufferSize() + 2 * BUFFER_PAD]; // 实际大小=指定的大小+2倍填充大小
         fill(eventFactory);
     }
 
@@ -349,7 +349,7 @@ public final class RingBuffer<E> extends RingBufferFields<E> implements Cursored
     /**
      * Add the specified gating sequences to this instance of the Disruptor.  They will
      * safely and atomically added to the list of gating sequences.
-     *
+     * 原子性地将新的门控序列增加到AbstractSequencer的gatingSequences属性中
      * @param gatingSequences The sequences to add.
      */
     public void addGatingSequences(Sequence... gatingSequences)
@@ -955,7 +955,7 @@ public final class RingBuffer<E> extends RingBufferFields<E> implements Cursored
     private <A> void translateAndPublish(EventTranslatorOneArg<E, A> translator, long sequence, A arg0)
     {
         try
-        {
+        {// 使用翻译器将arg0放置到sequence对应的对象上
             translator.translateTo(get(sequence), sequence, arg0);
         }
         finally

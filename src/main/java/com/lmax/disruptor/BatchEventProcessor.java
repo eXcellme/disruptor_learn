@@ -124,13 +124,13 @@ public final class BatchEventProcessor<T>
             while (true)
             {
                 try
-                {
-                    final long availableSequence = sequenceBarrier.waitFor(nextSequence);
+                {   // availableSequence返回的是可用的最大值
+                    final long availableSequence = sequenceBarrier.waitFor(nextSequence); // 使用给定的等待策略去等待下一个序列可用
                     if (batchStartAware != null)
                     {
                         batchStartAware.onBatchStart(availableSequence - nextSequence + 1);
                     }
-
+                    // 批处理在此处得以体现
                     while (nextSequence <= availableSequence)
                     {
                         event = dataProvider.get(nextSequence);

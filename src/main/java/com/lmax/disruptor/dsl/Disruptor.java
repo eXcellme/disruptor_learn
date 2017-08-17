@@ -531,20 +531,21 @@ public class Disruptor<T>
         }
         return false;
     }
-
+    // 由EventHandlerGroup调用时，barrierSequences是EventHandlerGroup实例的序列，也就是上一个事件处理者组的序列，作为当前事件处理的门控，防止后边的消费链超前
+    // 如果是第一次调用handleEventsWith，则barrierSequences是一个空数组
     EventHandlerGroup<T> createEventProcessors(
         final Sequence[] barrierSequences,
         final EventHandler<? super T>[] eventHandlers)
     {
         checkNotStarted();
-
+        // 对应事件处理器的序列
         final Sequence[] processorSequences = new Sequence[eventHandlers.length];
         final SequenceBarrier barrier = ringBuffer.newBarrier(barrierSequences);
 
         for (int i = 0, eventHandlersLength = eventHandlers.length; i < eventHandlersLength; i++)
         {
             final EventHandler<? super T> eventHandler = eventHandlers[i];
-
+            // 批量处理事件的循环
             final BatchEventProcessor<T> batchEventProcessor =
                 new BatchEventProcessor<T>(ringBuffer, barrier, eventHandler);
 
@@ -556,7 +557,7 @@ public class Disruptor<T>
             consumerRepository.add(batchEventProcessor, eventHandler, barrier);
             processorSequences[i] = batchEventProcessor.getSequence();
         }
-
+        // 每次添加完事件处理器后，更新门控序列，以便后续调用链的添加。（所谓门控，是指后续消费链的消费，不能超过前边。）
         updateGatingSequencesForNextInChain(barrierSequences, processorSequences);
 
         return new EventHandlerGroup<T>(this, consumerRepository, processorSequences);
@@ -566,8 +567,8 @@ public class Disruptor<T>
     {
         if (processorSequences.length > 0)
         {
-            ringBuffer.addGatingSequences(processorSequences);
-            for (final Sequence barrierSequence : barrierSequences)
+            ringBuffer.addGatingSequences(processorSequences); // 将新的序列添加到Sequencer中的gatingSequences中
+            for (final Sequence barrierSequence : barrierSequences) // 将老的序列从Sequencer中的gatingSequences中删除？
             {
                 ringBuffer.removeGatingSequence(barrierSequence);
             }

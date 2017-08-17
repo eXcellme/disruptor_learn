@@ -19,14 +19,15 @@ package com.lmax.disruptor;
 /**
  * {@link SequenceBarrier} handed out for gating {@link EventProcessor}s on a cursor sequence and optional dependent {@link EventProcessor}(s),
  * using the given WaitStrategy.
+ * 处理序号屏障，用于记录一组消费者（EventHandlerGroup）处理数据的位置
  */
 final class ProcessingSequenceBarrier implements SequenceBarrier
 {
     private final WaitStrategy waitStrategy;
     private final Sequence dependentSequence;
     private volatile boolean alerted = false;
-    private final Sequence cursorSequence;
-    private final Sequencer sequencer;
+    private final Sequence cursorSequence; // AbstractSequencer中的cursor引用，记录当前发布者发布的最新位置
+    private final Sequencer sequencer; // MultiProducerSequencer 或 SingleProducerSequencer
 
     public ProcessingSequenceBarrier(
         final Sequencer sequencer,
@@ -37,11 +38,11 @@ final class ProcessingSequenceBarrier implements SequenceBarrier
         this.sequencer = sequencer;
         this.waitStrategy = waitStrategy;
         this.cursorSequence = cursorSequence;
-        if (0 == dependentSequences.length)
+        if (0 == dependentSequences.length) // 依赖的上一组序列长度，第一次是0
         {
             dependentSequence = cursorSequence;
         }
-        else
+        else // 将上一组序列数组复制成新数组保存，引用不变
         {
             dependentSequence = new FixedSequenceGroup(dependentSequences);
         }

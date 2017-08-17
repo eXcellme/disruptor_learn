@@ -26,14 +26,14 @@ import com.lmax.disruptor.util.Util;
  * ownership of the current cursor.
  */
 public abstract class AbstractSequencer implements Sequencer
-{
+{   // 用于原子更新由volatile引用的gatingSequence属性
     private static final AtomicReferenceFieldUpdater<AbstractSequencer, Sequence[]> SEQUENCE_UPDATER =
         AtomicReferenceFieldUpdater.newUpdater(AbstractSequencer.class, Sequence[].class, "gatingSequences");
 
     protected final int bufferSize;
     protected final WaitStrategy waitStrategy;
-    protected final Sequence cursor = new Sequence(Sequencer.INITIAL_CURSOR_VALUE);
-    protected volatile Sequence[] gatingSequences = new Sequence[0];
+    protected final Sequence cursor = new Sequence(Sequencer.INITIAL_CURSOR_VALUE); // 标识当前发布的游标位置
+    protected volatile Sequence[] gatingSequences = new Sequence[0]; // 门控序列，使用updater进行原子更新
 
     /**
      * Create with the specified buffer size and wait strategy.

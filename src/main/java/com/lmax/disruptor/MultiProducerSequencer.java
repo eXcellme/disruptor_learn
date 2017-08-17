@@ -33,14 +33,14 @@ import com.lmax.disruptor.util.Util;
 public final class MultiProducerSequencer extends AbstractSequencer
 {
     private static final Unsafe UNSAFE = Util.getUnsafe();
-    private static final long BASE = UNSAFE.arrayBaseOffset(int[].class);
-    private static final long SCALE = UNSAFE.arrayIndexScale(int[].class);
+    private static final long BASE = UNSAFE.arrayBaseOffset(int[].class); // 获取int[]数组类的第一个元素与该类起始位置的偏移。
+    private static final long SCALE = UNSAFE.arrayIndexScale(int[].class); // 每个元素需要占用的位置，也有可能返回0。BASE和SCALE都是为了操作availableBuffer
 
     private final Sequence gatingSequenceCache = new Sequence(Sequencer.INITIAL_CURSOR_VALUE);
 
     // availableBuffer tracks the state of each ringbuffer slot
     // see below for more details on the approach
-    private final int[] availableBuffer;
+    private final int[] availableBuffer; // 初始全是-1，为0的位置，表示此slot可用
     private final int indexMask;
     private final int indexShift;
 
@@ -121,10 +121,10 @@ public final class MultiProducerSequencer extends AbstractSequencer
 
         do
         {
-            current = cursor.get();
+            current = cursor.get(); // 当前游标值，初始化时是-1
             next = current + n;
 
-            long wrapPoint = next - bufferSize;
+            long wrapPoint = next - bufferSize; // 将发生环绕的位置
             long cachedGatingSequence = gatingSequenceCache.get();
 
             if (wrapPoint > cachedGatingSequence || cachedGatingSequence > current)
@@ -138,7 +138,7 @@ public final class MultiProducerSequencer extends AbstractSequencer
                     continue;
                 }
 
-                gatingSequenceCache.set(gatingSequence);
+                gatingSequenceCache.set(gatingSequence); // 更新门控值
             }
             else if (cursor.compareAndSet(current, next))
             {
@@ -216,7 +216,7 @@ public final class MultiProducerSequencer extends AbstractSequencer
     public void publish(final long sequence)
     {
         setAvailable(sequence);
-        waitStrategy.signalAllWhenBlocking();
+        waitStrategy.signalAllWhenBlocking(); // 如果使用BlokingWaitStrategy，才会进行通知。否则不会操作
     }
 
     /**
@@ -250,15 +250,22 @@ public final class MultiProducerSequencer extends AbstractSequencer
      * minimum gating sequence is effectively our last available position in the
      * buffer), when we have new data and successfully claimed a slot we can simply
      * write over the top.
+     *
+     * availableBuffer设置可用标志
+     * 主要原因是避免发布者线程之间共享一个序列对象。
+     * 游标和最小门控序列的差值应该永远不大于RingBuffer的大小（防止生产者太快，覆盖未消费完的数据）
+     *
+     *
      */
     private void setAvailable(final long sequence)
-    {
+    { // calculateIndex 求模%， calculateAvailabilityFlag 求余/
         setAvailableBufferValue(calculateIndex(sequence), calculateAvailabilityFlag(sequence));
     }
 
     private void setAvailableBufferValue(int index, int flag)
-    {
+    {   // 使用Unsafe更新属性，因为是直接操作内存，所以需要计算元素位置对应的内存位置bufferAddress
         long bufferAddress = (index * SCALE) + BASE;
+        // availableBuffer是标志可用位置的int数组，初始全为-1。随着sequence不断上升，buffer中固定位置的flag（也就是sequence和bufferSize的余数）会一直增大。
         UNSAFE.putOrderedInt(availableBuffer, bufferAddress, flag);
     }
 
@@ -268,10 +275,10 @@ public final class MultiProducerSequencer extends AbstractSequencer
     @Override
     public boolean isAvailable(long sequence)
     {
-        int index = calculateIndex(sequence);
-        int flag = calculateAvailabilityFlag(sequence);
+        int index = calculateIndex(sequence); // 求模，算位置
+        int flag = calculateAvailabilityFlag(sequence); // 求余，flag可以理解为sequence在长度为bufferSize的跑道上跑到第几圈了
         long bufferAddress = (index * SCALE) + BASE;
-        return UNSAFE.getIntVolatile(availableBuffer, bufferAddress) == flag;
+        return UNSAFE.getIntVolatile(availableBuffer, bufferAddress) == flag; // 只有在可用缓冲中保存的位置上记录的圈数，和计算的圈数相等时，才能说此序号可用
     }
 
     @Override
@@ -279,7 +286,7 @@ public final class MultiProducerSequencer extends AbstractSequencer
     {
         for (long sequence = lowerBound; sequence <= availableSequence; sequence++)
         {
-            if (!isAvailable(sequence))
+            if (!isAvailable(sequence)) // 从小(初始值应为已经处理的值+1)到大，依次计算是否可用，直到算到不可用的数时，返回上一个数
             {
                 return sequence - 1;
             }
@@ -289,12 +296,12 @@ public final class MultiProducerSequencer extends AbstractSequencer
     }
 
     private int calculateAvailabilityFlag(final long sequence)
-    {
+    { // 求余数 就是 sequence / bufferSize , bufferSize = 2^indexShift。
         return (int) (sequence >>> indexShift);
     }
 
     private int calculateIndex(final long sequence)
-    {
+    { // 计算位置即求模，直接使用序号 与 掩码（2的平方-1，也就是一个全1的二进制表示）,相当于 sequence % (bufferSize), bufferSize = indexMask + 1
         return ((int) sequence) & indexMask;
     }
 }

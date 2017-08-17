@@ -87,6 +87,10 @@ public interface Sequencer extends Cursored, Sequenced
      * @param nextSequence      The sequence to start scanning from.
      * @param availableSequence The sequence to scan to.
      * @return The highest value that can be safely read, will be at least <code>nextSequence - 1</code>.
+     *
+     * 获取能够从环形缓冲读取的最高的序列号。依赖Sequencer的实现，可能会扫描Sequencer的一些值。扫描从nextSequence
+     * 到availableSequence。如果没有大于等于nextSequence的可用值，返回值将为nextSequence-1。为了工作正常，消费者
+     * 应该传递一个比最后成功处理的序列值大1的值。
      */
     long getHighestPublishedSequence(long nextSequence, long availableSequence);
 

@@ -34,7 +34,7 @@ class EventProcessorInfo<T> implements ConsumerInfo
     private final EventProcessor eventprocessor;
     private final EventHandler<? super T> handler;
     private final SequenceBarrier barrier;
-    private boolean endOfChain = true;
+    private boolean endOfChain = true; // 标识当前的消费者是否属于消费者链的最后一批
 
     EventProcessorInfo(
         final EventProcessor eventprocessor, final EventHandler<? super T> handler, final SequenceBarrier barrier)

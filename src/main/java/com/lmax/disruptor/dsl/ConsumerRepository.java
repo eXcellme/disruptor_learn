@@ -27,9 +27,9 @@ import java.util.*;
 class ConsumerRepository<T> implements Iterable<ConsumerInfo>
 {
     private final Map<EventHandler<?>, EventProcessorInfo<T>> eventProcessorInfoByEventHandler =
-        new IdentityHashMap<EventHandler<?>, EventProcessorInfo<T>>();
+        new IdentityHashMap<EventHandler<?>, EventProcessorInfo<T>>(); // hander引用为key
     private final Map<Sequence, ConsumerInfo> eventProcessorInfoBySequence =
-        new IdentityHashMap<Sequence, ConsumerInfo>();
+        new IdentityHashMap<Sequence, ConsumerInfo>(); // 处理器的序列引用为key
     private final Collection<ConsumerInfo> consumerInfos = new ArrayList<ConsumerInfo>();
 
     public void add(

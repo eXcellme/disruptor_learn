@@ -33,7 +33,7 @@ class SequenceGroups
         long cursorSequence;
         Sequence[] updatedSequences;
         Sequence[] currentSequences;
-
+        // 将新加入的sequencesToAdd以CAS方式添加到属性中
         do
         {
             currentSequences = updater.get(holder);
@@ -48,7 +48,7 @@ class SequenceGroups
             }
         }
         while (!updater.compareAndSet(holder, currentSequences, updatedSequences));
-
+        // 为新增加的sequencesToAdd更新最新的游标值
         cursorSequence = cursor.getCursor();
         for (Sequence sequence : sequencesToAdd)
         {

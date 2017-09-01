@@ -20,6 +20,7 @@ package com.lmax.disruptor;
  *
  * @param <T> event implementation storing the data for sharing during exchange or parallel coordination of an event.
  * @see BatchEventProcessor#setExceptionHandler(ExceptionHandler) if you want to handle exceptions propagated out of the handler.
+ * 处理事件的回调接口
  */
 public interface EventHandler<T>
 {

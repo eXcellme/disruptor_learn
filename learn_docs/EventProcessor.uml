@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Diagram>
+  <ID>JAVA</ID>
+  <OriginalElement>com.lmax.disruptor.BatchEventProcessor</OriginalElement>
+  <nodes>
+    <node x="0.0" y="246.0">com.lmax.disruptor.WorkProcessor</node>
+    <node x="78.75" y="0.0">java.lang.FunctionalInterface</node>
+    <node x="168.0" y="246.0">com.lmax.disruptor.BatchEventProcessor</node>
+    <node x="93.25" y="164.0">com.lmax.disruptor.EventProcessor</node>
+    <node x="111.25" y="82.0">java.lang.Runnable</node>
+  </nodes>
+  <notes />
+  <edges>
+    <edge source="com.lmax.disruptor.EventProcessor" target="java.lang.Runnable">
+      <point x="0.0" y="-16.0" />
+      <point x="0.0" y="16.0" />
+    </edge>
+    <edge source="java.lang.Runnable" target="java.lang.FunctionalInterface">
+      <point x="0.0" y="-16.0" />
+      <point x="0.0" y="16.0" />
+    </edge>
+    <edge source="com.lmax.disruptor.BatchEventProcessor" target="com.lmax.disruptor.EventProcessor">
+      <point x="0.0" y="-16.0" />
+      <point x="261.5" y="221.0" />
+      <point x="205.0" y="221.0" />
+      <point x="37.25" y="16.0" />
+    </edge>
+    <edge source="com.lmax.disruptor.WorkProcessor" target="com.lmax.disruptor.EventProcessor">
+      <point x="0.0" y="-16.0" />
+      <point x="74.0" y="221.0" />
+      <point x="130.5" y="221.0" />
+      <point x="-37.25" y="16.0" />
+    </edge>
+  </edges>
+  <settings layout="Hierarchic Group" zoom="1.0" x="195.0" y="150.0" />
+  <SelectedNodes />
+  <Categories />
+  <SCOPE>All</SCOPE>
+  <VISIBILITY>private</VISIBILITY>
+</Diagram>
+

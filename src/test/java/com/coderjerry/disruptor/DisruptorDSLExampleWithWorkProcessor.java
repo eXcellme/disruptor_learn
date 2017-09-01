@@ -3,8 +3,8 @@ package com.coderjerry.disruptor;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.EventFactory;
-import com.lmax.disruptor.EventHandler;
 import com.lmax.disruptor.EventTranslatorOneArg;
+import com.lmax.disruptor.WorkHandler;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -15,7 +15,7 @@ import java.util.concurrent.ThreadFactory;
  * Disruptor例子
  * jerry li
  */
-public class DisruptorDSLExample {
+public class DisruptorDSLExampleWithWorkProcessor {
 
   /**
    * 用户自定义事件
@@ -74,60 +74,60 @@ public class DisruptorDSLExample {
 
     disruptor = new Disruptor<ExampleEvent>(
         new ExampleEventFactory(),  // 用于创建环形缓冲中对象的工厂
-        32,  // 环形缓冲的大小
+        8,  // 环形缓冲的大小
         threadFactory,  // 用于事件处理的线程工厂
         ProducerType.MULTI, // 生产者类型，单vs多生产者
         new BlockingWaitStrategy()); // 等待环形缓冲游标的等待策略，这里使用阻塞模式，也是Disruptor中唯一有锁的地方
 
     // 消费者模拟-日志处理
-    EventHandler journalHandler = new EventHandler() {
+    WorkHandler journalHandler = new WorkHandler() {
       @Override
-      public void onEvent(Object event, long sequence, boolean endOfBatch) throws Exception {
+      public void onEvent(Object event) throws Exception {
         Thread.sleep(8);
-        System.out.println(Thread.currentThread().getId() + " process journal " + event + ", seq: " + sequence);
+        System.out.println(Thread.currentThread().getId() + " process journal " + event );
       }
     };
 
-    // 消费者模拟-复制处理
-    EventHandler replicateHandler = new EventHandler() {
-      @Override
-      public void onEvent(Object event, long sequence, boolean endOfBatch) throws Exception {
-        Thread.sleep(10);
-        System.out.println(Thread.currentThread().getId() + " process replication " + event + ", seq: " + sequence);
-      }
-    };
-
-    // 消费者模拟-解码处理
-    EventHandler unmarshallHandler = new EventHandler() { // 最慢
-      @Override
-      public void onEvent(Object event, long sequence, boolean endOfBatch) throws Exception {
-        Thread.sleep(1*1000);
-        if(event instanceof ExampleEvent){
-          ((ExampleEvent)event).ext = "unmarshalled ";
-        }
-        System.out.println(Thread.currentThread().getId() + " process unmarshall " + event + ", seq: " + sequence);
-
-      }
-    };
+//    // 消费者模拟-复制处理
+//    WorkHandler replicateHandler = new WorkHandler() {
+//      @Override
+//      public void onEvent(Object event) throws Exception {
+//        Thread.sleep(10);
+//        System.out.println(Thread.currentThread().getId() + " process replication " + event + ", seq: " + sequence);
+//      }
+//    };
+//
+//    // 消费者模拟-解码处理
+//    WorkHandler unmarshallHandler = new WorkHandler() { // 最慢
+//      @Override
+//      public void onEvent(Object event) throws Exception {
+//        Thread.sleep(1*1000);
+//        if(event instanceof ExampleEvent){
+//          ((ExampleEvent)event).ext = "unmarshalled ";
+//        }
+//        System.out.println(Thread.currentThread().getId() + " process unmarshall " + event + ", seq: " + sequence);
+//
+//      }
+//    };
 
     // 消费者处理-结果上报，只有执行完以上三种后才能执行此消费者
-    EventHandler resultHandler = new EventHandler() {
+    WorkHandler resultHandler = new WorkHandler() {
       @Override
-      public void onEvent(Object event, long sequence, boolean endOfBatch) throws Exception {
-        System.out.println(Thread.currentThread().getId() + " =========== result " + event + ", seq: " + sequence);
+      public void onEvent(Object event) throws Exception {
+        System.out.println(Thread.currentThread().getId() + " =========== result " + event );
         latch.countDown();
       }
     };
     // 定义消费链，先并行处理日志、解码和复制，再处理结果上报
     disruptor
-        .handleEventsWith(
-          new EventHandler[]{
+        .handleEventsWithWorkerPool(
+          new WorkHandler[]{
               journalHandler,
-              unmarshallHandler,
-              replicateHandler
+              journalHandler,
+              journalHandler
           }
         )
-        .then(resultHandler);
+        .thenHandleEventsWithWorkerPool(resultHandler);
     // 启动Disruptor
     disruptor.start();
 
@@ -143,7 +143,7 @@ public class DisruptorDSLExample {
 
   public static void main(String[] args) {
     final int events = 20; // 必须为偶数
-    DisruptorDSLExample disruptorDSLExample = new DisruptorDSLExample();
+    DisruptorDSLExampleWithWorkProcessor disruptorDSLExample = new DisruptorDSLExampleWithWorkProcessor();
     final CountDownLatch latch = new CountDownLatch(events);
 
     disruptorDSLExample.createDisruptor(latch);
@@ -179,7 +179,6 @@ public class DisruptorDSLExample {
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
-
     disruptorDSLExample.shutdown();
   }
 

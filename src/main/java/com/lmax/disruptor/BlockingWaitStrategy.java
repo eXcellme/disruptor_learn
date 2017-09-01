@@ -34,7 +34,7 @@ public final class BlockingWaitStrategy implements WaitStrategy
         throws AlertException, InterruptedException
     {
         long availableSequence;
-        if (cursorSequence.get() < sequence) // 当前游标小于给定序号，也就是无可用事件
+        if (cursorSequence.get() < sequence) // 生产者当前游标小于给定序号，也就是无可用事件
         {
             lock.lock();
             try
@@ -42,6 +42,9 @@ public final class BlockingWaitStrategy implements WaitStrategy
                 while (cursorSequence.get() < sequence)
                 {
                     barrier.checkAlert();
+                    // 循环等待，在Sequencer中publish进行唤醒；等待消费时也会在循环中定时唤醒。
+                    // 循环等待的原因，是要检查alert状态。如果不检查将导致不能关闭Disruptor。
+//                    System.out.println(Thread.currentThread().getName() + "消费者无可用消费事件...await...");
                     processorNotifyCondition.await();
                 }
             }
@@ -50,7 +53,9 @@ public final class BlockingWaitStrategy implements WaitStrategy
                 lock.unlock();
             }
         }
-
+        // 给定序号大于上一个消费者组最慢消费者（如当前消费者为第一组则和生产者游标序号比较）序号时，需要等待。不能超前消费上一个消费者组未消费完毕的事件。
+        // 那么为什么这里没有锁呢？可以想一下此时的场景，代码运行至此，已能保证生产者有新事件，如果进入循环，说明上一组消费者还未消费完毕。
+        // 而通常我们的消费者都是较快完成任务的，所以这里才会考虑使用Busy Spin的方式等待上一组消费者完成消费。
         while ((availableSequence = dependentSequence.get()) < sequence)
         {
             barrier.checkAlert();

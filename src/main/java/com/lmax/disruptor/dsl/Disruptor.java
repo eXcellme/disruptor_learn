@@ -130,11 +130,11 @@ public class Disruptor<T>
      * @param waitStrategy   the wait strategy to use for the ring buffer.
      */
     public Disruptor(
-            final EventFactory<T> eventFactory,
-            final int ringBufferSize,
-            final ThreadFactory threadFactory,
-            final ProducerType producerType,
-            final WaitStrategy waitStrategy)
+            final EventFactory<T> eventFactory, // 用于创建环形缓冲中对象的工厂
+            final int ringBufferSize, // 环形缓冲的大小
+            final ThreadFactory threadFactory, // 用于事件处理的线程工厂
+            final ProducerType producerType, // 生产者类型，单vs多生产者
+            final WaitStrategy waitStrategy) // 等待环形缓冲游标的等待策略
     {
         this(
             RingBuffer.create(producerType, eventFactory, ringBufferSize, waitStrategy),
@@ -396,6 +396,7 @@ public class Disruptor<T>
 
     /**
      * Calls {@link com.lmax.disruptor.EventProcessor#halt()} on all of the event processors created via this disruptor.
+     * 循环调用EventProcessor的halt()，用于关闭
      */
     public void halt()
     {
@@ -538,7 +539,7 @@ public class Disruptor<T>
         final EventHandler<? super T>[] eventHandlers)
     {
         checkNotStarted();
-        // 对应事件处理器的序列
+        // 对应此事件处理器组的序列组
         final Sequence[] processorSequences = new Sequence[eventHandlers.length];
         final SequenceBarrier barrier = ringBuffer.newBarrier(barrierSequences);
 
@@ -562,17 +563,19 @@ public class Disruptor<T>
 
         return new EventHandlerGroup<T>(this, consumerRepository, processorSequences);
     }
-
+    // 为消费链下一组消费者，更新门控序列
+    // barrierSequences是上一组事件处理器组的序列（如果本次是第一次，则为空数组），本组不能超过上组序列值
+    // processorSequences是本次要设置的事件处理器组的序列
     private void updateGatingSequencesForNextInChain(final Sequence[] barrierSequences, final Sequence[] processorSequences)
     {
         if (processorSequences.length > 0)
         {
-            ringBuffer.addGatingSequences(processorSequences); // 将新的序列添加到Sequencer中的gatingSequences中
-            for (final Sequence barrierSequence : barrierSequences) // 将老的序列从Sequencer中的gatingSequences中删除？
+            ringBuffer.addGatingSequences(processorSequences); // 将本组序列添加到Sequencer中的gatingSequences中
+            for (final Sequence barrierSequence : barrierSequences) // 将上组序列从Sequencer中的gatingSequences中，gatingSequences一直保存消费链末端消费者的序列组
             {
                 ringBuffer.removeGatingSequence(barrierSequence);
             }
-            consumerRepository.unMarkEventProcessorsAsEndOfChain(barrierSequences);
+            consumerRepository.unMarkEventProcessorsAsEndOfChain(barrierSequences); // 取消标记上一组消费者为消费链末端
         }
     }
 

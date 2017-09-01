@@ -21,6 +21,7 @@ import com.lmax.disruptor.util.Util;
 
 /**
  * Hides a group of Sequences behind a single Sequence
+ * 组合模式(Composite)
  */
 public final class FixedSequenceGroup extends Sequence
 {

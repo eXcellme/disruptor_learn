@@ -94,6 +94,7 @@ public abstract class AbstractSequencer implements Sequencer
 
     /**
      * @see Sequencer#getMinimumSequence()
+     *
      */
     @Override
     public long getMinimumSequence()

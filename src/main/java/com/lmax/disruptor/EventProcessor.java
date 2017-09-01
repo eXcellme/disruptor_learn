@@ -19,6 +19,7 @@ package com.lmax.disruptor;
  * EventProcessors waitFor events to become available for consumption from the {@link RingBuffer}
  * <p>
  * An EventProcessor will generally be associated with a Thread for execution.
+ * 事件执行器，等待RingBuffer有可用消费事件。一个事件处理器关联一个执行线程
  */
 public interface EventProcessor extends Runnable
 {

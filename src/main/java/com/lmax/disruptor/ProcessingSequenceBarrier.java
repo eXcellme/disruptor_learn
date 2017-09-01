@@ -18,14 +18,15 @@ package com.lmax.disruptor;
 
 /**
  * {@link SequenceBarrier} handed out for gating {@link EventProcessor}s on a cursor sequence and optional dependent {@link EventProcessor}(s),
- * using the given WaitStrategy.
- * 处理序号屏障，用于记录一组消费者（EventHandlerGroup）处理数据的位置
+ * using the given WaitStrategy. <br>
+ * 处理序号屏障，记录了一组消费者（EventHandlerGroup）处理数据的位置以及生产者的游标位置。
+ * 被EventProcessor持有，用于消费者了解生产者当前位置
  */
 final class ProcessingSequenceBarrier implements SequenceBarrier
 {
-    private final WaitStrategy waitStrategy;
-    private final Sequence dependentSequence;
-    private volatile boolean alerted = false;
+    private final WaitStrategy waitStrategy; // 等待可用消费时，指定的等待策略
+    private final Sequence dependentSequence; // 依赖的上组消费者的序号，如果当前为第一组则为cursorSequence（即生产者发布游标序列），否则使用FixedSequenceGroup封装上组消费者序列
+    private volatile boolean alerted = false; // 当触发halt时，将标记alerted为true
     private final Sequence cursorSequence; // AbstractSequencer中的cursor引用，记录当前发布者发布的最新位置
     private final Sequencer sequencer; // MultiProducerSequencer 或 SingleProducerSequencer
 
@@ -53,14 +54,14 @@ final class ProcessingSequenceBarrier implements SequenceBarrier
         throws AlertException, InterruptedException, TimeoutException
     {
         checkAlert();
-
+        // 获取最大可用序号 sequence为给定序号，一般为当前序号+1，cursorSequence记录生产者最新位置，
         long availableSequence = waitStrategy.waitFor(sequence, cursorSequence, dependentSequence, this);
 
         if (availableSequence < sequence)
         {
             return availableSequence;
         }
-
+        // 返回已发布最高的序列值，将对每个序号进行校验
         return sequencer.getHighestPublishedSequence(sequence, availableSequence);
     }
 

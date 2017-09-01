@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Diagram>
+  <ID>JAVA</ID>
+  <OriginalElement>com.lmax.disruptor.SingleProducerSequencer</OriginalElement>
+  <nodes>
+    <node x="196.5" y="82.0">com.lmax.disruptor.Sequencer</node>
+    <node x="19.0" y="410.0">com.lmax.disruptor.SingleProducerSequencer</node>
+    <node x="6.0" y="246.0">com.lmax.disruptor.SingleProducerSequencerPad</node>
+    <node x="0.0" y="328.0">com.lmax.disruptor.SingleProducerSequencerFields</node>
+    <node x="274.0" y="246.0">com.lmax.disruptor.MultiProducerSequencer</node>
+    <node x="262.25" y="0.0">com.lmax.disruptor.Sequenced</node>
+    <node x="169.0" y="164.0">com.lmax.disruptor.AbstractSequencer</node>
+    <node x="134.25" y="0.0">com.lmax.disruptor.Cursored</node>
+  </nodes>
+  <notes />
+  <edges>
+    <edge source="com.lmax.disruptor.AbstractSequencer" target="com.lmax.disruptor.Sequencer">
+      <point x="0.0" y="-16.0" />
+      <point x="0.0" y="16.0" />
+    </edge>
+    <edge source="com.lmax.disruptor.Sequencer" target="com.lmax.disruptor.Sequenced">
+      <point x="29.75" y="-16.0" />
+      <point x="285.75" y="57.0" />
+      <point x="323.75" y="57.0" />
+      <point x="0.0" y="16.0" />
+    </edge>
+    <edge source="com.lmax.disruptor.SingleProducerSequencer" target="com.lmax.disruptor.SingleProducerSequencerFields">
+      <point x="0.0" y="-16.0" />
+      <point x="0.0" y="16.0" />
+    </edge>
+    <edge source="com.lmax.disruptor.MultiProducerSequencer" target="com.lmax.disruptor.AbstractSequencer">
+      <point x="0.0" y="-16.0" />
+      <point x="382.0" y="221.0" />
+      <point x="299.5" y="221.0" />
+      <point x="43.5" y="16.0" />
+    </edge>
+    <edge source="com.lmax.disruptor.Sequencer" target="com.lmax.disruptor.Cursored">
+      <point x="-29.75" y="-16.0" />
+      <point x="226.25" y="57.0" />
+      <point x="188.25" y="57.0" />
+      <point x="0.0" y="16.0" />
+    </edge>
+    <edge source="com.lmax.disruptor.SingleProducerSequencerFields" target="com.lmax.disruptor.SingleProducerSequencerPad">
+      <point x="0.0" y="-16.0" />
+      <point x="0.0" y="16.0" />
+    </edge>
+    <edge source="com.lmax.disruptor.SingleProducerSequencerPad" target="com.lmax.disruptor.AbstractSequencer">
+      <point x="0.0" y="-16.0" />
+      <point x="130.0" y="221.0" />
+      <point x="212.5" y="221.0" />
+      <point x="-43.5" y="16.0" />
+    </edge>
+  </edges>
+  <settings layout="Hierarchic Group" zoom="0.8571428571428571" x="131.83333333333337" y="245.75" />
+  <SelectedNodes>
+    <node>com.lmax.disruptor.MultiProducerSequencer</node>
+  </SelectedNodes>
+  <Categories />
+  <SCOPE>All</SCOPE>
+  <VISIBILITY>private</VISIBILITY>
+</Diagram>
+

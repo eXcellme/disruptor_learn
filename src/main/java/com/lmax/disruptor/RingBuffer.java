@@ -28,10 +28,10 @@ abstract class RingBufferPad
 
 abstract class RingBufferFields<E> extends RingBufferPad
 {
-    private static final int BUFFER_PAD;
-    private static final long REF_ARRAY_BASE;
-    private static final int REF_ELEMENT_SHIFT;
-    private static final Unsafe UNSAFE = Util.getUnsafe();
+    private static final int BUFFER_PAD; // 用于缓存行填充的空元素个数
+    private static final long REF_ARRAY_BASE; // 内存中引用数组的开始元素基地址，是数组开始的地址+BUFFER_PAD个元素的偏移量之和，后续元素的内存地址需要在此基础计算地址
+    private static final int REF_ELEMENT_SHIFT; // 引用元素的位移量，用于计算BUFFER_PAD偏移量，基于位移计算比乘法运算更高效
+    private static final Unsafe UNSAFE = Util.getUnsafe(); // 上面的变量都是为了UNSAFE的操作
 
     static
     {
@@ -50,10 +50,11 @@ abstract class RingBufferFields<E> extends RingBufferPad
         }
         BUFFER_PAD = 128 / scale;
         // Including the buffer pad in the array base offset
+        // BUFFER_PAD << REF_ELEMENT_SHIFT 实际上是BUFFER_PAD * scale的等价高效计算方式
         REF_ARRAY_BASE = UNSAFE.arrayBaseOffset(Object[].class) + (BUFFER_PAD << REF_ELEMENT_SHIFT);
     }
 
-    private final long indexMask;
+    private final long indexMask; // 用于进行 & 位与操作，实现高效的模操作
     private final Object[] entries;
     protected final int bufferSize;
     protected final Sequencer sequencer; // 生产者序列号
@@ -75,21 +76,21 @@ abstract class RingBufferFields<E> extends RingBufferPad
         }
 
         this.indexMask = bufferSize - 1;
-        this.entries = new Object[sequencer.getBufferSize() + 2 * BUFFER_PAD]; // 实际大小=指定的大小+2倍填充大小
+        this.entries = new Object[sequencer.getBufferSize() + 2 * BUFFER_PAD]; // 实际大小=指定的大小+2倍填充大小（2*32）？
         fill(eventFactory);
     }
 
     private void fill(EventFactory<E> eventFactory)
     {
         for (int i = 0; i < bufferSize; i++)
-        {
+        { // 赋值时跳过了BUFFER_PAD个元素，在有效元素的前后各有BUFFER_PAD个空位，用于做缓存行填充
             entries[BUFFER_PAD + i] = eventFactory.newInstance();
         }
     }
 
     @SuppressWarnings("unchecked")
     protected final E elementAt(long sequence)
-    {
+    { // 通过序号计算元素在内存中基于entries的偏移位置，以下计算等价于(基地址+求模*单元素偏移量)，计算更高效
         return (E) UNSAFE.getObject(entries, REF_ARRAY_BASE + ((sequence & indexMask) << REF_ELEMENT_SHIFT));
     }
 }
@@ -127,6 +128,7 @@ public final class RingBuffer<E> extends RingBufferFields<E> implements Cursored
      * @param waitStrategy used to determine how to wait for new elements to become available.
      * @throws IllegalArgumentException if bufferSize is less than 1 or not a power of 2
      * @see MultiProducerSequencer
+     * 构建多生产者RingBuffer
      */
     public static <E> RingBuffer<E> createMultiProducer(
         EventFactory<E> factory,
@@ -159,6 +161,7 @@ public final class RingBuffer<E> extends RingBufferFields<E> implements Cursored
      * @param waitStrategy used to determine how to wait for new elements to become available.
      * @throws IllegalArgumentException if bufferSize is less than 1 or not a power of 2
      * @see SingleProducerSequencer
+     * 构建单生产者的RingBuffer
      */
     public static <E> RingBuffer<E> createSingleProducer(
         EventFactory<E> factory,
@@ -198,7 +201,7 @@ public final class RingBuffer<E> extends RingBufferFields<E> implements Cursored
         int bufferSize,
         WaitStrategy waitStrategy)
     {
-        switch (producerType)
+        switch (producerType) // 构建RingBuffer时通过producerType来区分单生产者或多生产者
         {
             case SINGLE:
                 return createSingleProducer(factory, bufferSize, waitStrategy);
@@ -476,8 +479,8 @@ public final class RingBuffer<E> extends RingBufferFields<E> implements Cursored
     @Override
     public <A> void publishEvent(EventTranslatorOneArg<E, A> translator, A arg0)
     {
-        final long sequence = sequencer.next();
-        translateAndPublish(translator, sequence, arg0);
+        final long sequence = sequencer.next(); // 第一步 占坑
+        translateAndPublish(translator, sequence, arg0); // 第二步 填坑
     }
 
     /**

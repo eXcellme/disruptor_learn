@@ -23,43 +23,50 @@ package com.lmax.disruptor;
 public interface SequenceBarrier
 {
     /**
-     * Wait for the given sequence to be available for consumption.
-     *
+     * Wait for the given sequence to be available for consumption.<br>
+     * 等待指定序列可用
      * @param sequence to wait for
      * @return the sequence up to which is available
      * @throws AlertException       if a status change has occurred for the Disruptor
      * @throws InterruptedException if the thread needs awaking on a condition variable.
      * @throws TimeoutException
+     *
      */
     long waitFor(long sequence) throws AlertException, InterruptedException, TimeoutException;
 
     /**
-     * Get the current cursor value that can be read.
+     * Get the current cursor value that can be read.<br>
+     * 获取当前可读游标值
      *
      * @return value of the cursor for entries that have been published.
+     *
      */
     long getCursor();
 
     /**
-     * The current alert status for the barrier.
+     * The current alert status for the barrier.<br>
+     * 当前的alert状态
      *
      * @return true if in alert otherwise false.
      */
     boolean isAlerted();
 
     /**
-     * Alert the {@link EventProcessor}s of a status change and stay in this status until cleared.
+     * Alert the {@link EventProcessor}s of a status change and stay in this status until cleared.<br>
+     *
+     * 通知消费者状态变化。当调用EventProcessor#halt()将调用此方法。
      */
     void alert();
 
     /**
-     * Clear the current alert status.
+     * Clear the current alert status.<br>
+     * 清楚alert状态
      */
     void clearAlert();
 
     /**
      * Check if an alert has been raised and throw an {@link AlertException} if it has.
-     *
+     * 检查是否发生alert，发生将抛出异常
      * @throws AlertException if alert has been raised.
      */
     void checkAlert() throws AlertException;

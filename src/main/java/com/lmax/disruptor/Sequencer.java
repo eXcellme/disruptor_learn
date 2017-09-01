@@ -22,6 +22,7 @@ public interface Sequencer extends Cursored, Sequenced
 {
     /**
      * Set to -1 as sequence starting point
+     * 序号开始位置
      */
     long INITIAL_CURSOR_VALUE = -1L;
 
@@ -30,6 +31,7 @@ public interface Sequencer extends Cursored, Sequenced
      * a specific value.
      *
      * @param sequence The sequence to initialise too.
+     * 声明指定序号，只用在初始化RingBuffer到指定值，基本上不用了
      */
     void claim(long sequence);
 
@@ -38,6 +40,7 @@ public interface Sequencer extends Cursored, Sequenced
      *
      * @param sequence of the buffer to check
      * @return true if the sequence is available for use, false if not
+     * 用非阻塞方式，确认某个序号是否已经发布且事件可用。
      */
     boolean isAvailable(long sequence);
 
@@ -46,6 +49,7 @@ public interface Sequencer extends Cursored, Sequenced
      * safely and atomically added to the list of gating sequences.
      *
      * @param gatingSequences The sequences to add.
+     * 增加门控序列（消费者序列），用于生产者在生产时避免追尾消费者
      */
     void addGatingSequences(Sequence... gatingSequences);
 
@@ -54,6 +58,7 @@ public interface Sequencer extends Cursored, Sequenced
      *
      * @param sequence to be removed.
      * @return <tt>true</tt> if this sequence was found, <tt>false</tt> otherwise.
+     * 从门控序列中移除指定序列
      */
     boolean removeGatingSequence(Sequence sequence);
 
@@ -64,6 +69,7 @@ public interface Sequencer extends Cursored, Sequenced
      * @param sequencesToTrack
      * @return A sequence barrier that will track the specified sequences.
      * @see SequenceBarrier
+     * 消费者使用，用于追踪指定序列（通常是上一组消费者的序列）
      */
     SequenceBarrier newBarrier(Sequence... sequencesToTrack);
 
@@ -73,6 +79,7 @@ public interface Sequencer extends Cursored, Sequenced
      *
      * @return The minimum gating sequence or the cursor sequence if
      * no sequences have been added.
+     * 获取追踪序列中最小的序列
      */
     long getMinimumSequence();
 

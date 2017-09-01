@@ -116,12 +116,12 @@ public final class MultiProducerSequencer extends AbstractSequencer
             throw new IllegalArgumentException("n must be > 0");
         }
 
-        long current;
+        long current; // 当前游标值，初始化时是-1，也就是说-1+1->0是第一个使用的坑位
         long next;
 
         do
         {
-            current = cursor.get(); // 当前游标值，初始化时是-1
+            current = cursor.get();
             next = current + n;
 
             long wrapPoint = next - bufferSize; // 将发生环绕的位置
@@ -131,8 +131,9 @@ public final class MultiProducerSequencer extends AbstractSequencer
             {
                 long gatingSequence = Util.getMinimumSequence(gatingSequences, current);
 
-                if (wrapPoint > gatingSequence)
+                if (wrapPoint > gatingSequence) // 无可用坑位
                 {
+//                    System.out.println(Thread.currentThread().getName() + "生产者无可用坑位...notify...");
                     waitStrategy.signalAllWhenBlocking();
                     LockSupport.parkNanos(1); // TODO, should we spin based on the wait strategy?
                     continue;
@@ -140,7 +141,7 @@ public final class MultiProducerSequencer extends AbstractSequencer
 
                 gatingSequenceCache.set(gatingSequence); // 更新门控值
             }
-            else if (cursor.compareAndSet(current, next))
+            else if (cursor.compareAndSet(current, next)) // ? 不符合条件，更新next？
             {
                 break;
             }
@@ -258,14 +259,14 @@ public final class MultiProducerSequencer extends AbstractSequencer
      *
      */
     private void setAvailable(final long sequence)
-    { // calculateIndex 求模%， calculateAvailabilityFlag 求余/
+    { // calculateIndex 求模%， calculateAvailabilityFlag 求商/
         setAvailableBufferValue(calculateIndex(sequence), calculateAvailabilityFlag(sequence));
     }
 
     private void setAvailableBufferValue(int index, int flag)
     {   // 使用Unsafe更新属性，因为是直接操作内存，所以需要计算元素位置对应的内存位置bufferAddress
         long bufferAddress = (index * SCALE) + BASE;
-        // availableBuffer是标志可用位置的int数组，初始全为-1。随着sequence不断上升，buffer中固定位置的flag（也就是sequence和bufferSize的余数）会一直增大。
+        // availableBuffer是标志可用位置的int数组，初始全为-1。随着sequence不断上升，buffer中固定位置的flag（也就是sequence和bufferSize相除的商）会一直增大。
         UNSAFE.putOrderedInt(availableBuffer, bufferAddress, flag);
     }
 
@@ -276,7 +277,7 @@ public final class MultiProducerSequencer extends AbstractSequencer
     public boolean isAvailable(long sequence)
     {
         int index = calculateIndex(sequence); // 求模，算位置
-        int flag = calculateAvailabilityFlag(sequence); // 求余，flag可以理解为sequence在长度为bufferSize的跑道上跑到第几圈了
+        int flag = calculateAvailabilityFlag(sequence); // 求商，flag可以理解为sequence在长度为bufferSize的跑道上跑到第几圈了
         long bufferAddress = (index * SCALE) + BASE;
         return UNSAFE.getIntVolatile(availableBuffer, bufferAddress) == flag; // 只有在可用缓冲中保存的位置上记录的圈数，和计算的圈数相等时，才能说此序号可用
     }
@@ -296,7 +297,7 @@ public final class MultiProducerSequencer extends AbstractSequencer
     }
 
     private int calculateAvailabilityFlag(final long sequence)
-    { // 求余数 就是 sequence / bufferSize , bufferSize = 2^indexShift。
+    { // 求商数 就是 sequence / bufferSize , bufferSize = 2^indexShift。
         return (int) (sequence >>> indexShift);
     }
 

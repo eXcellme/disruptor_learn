@@ -15,7 +15,7 @@ import java.util.concurrent.ThreadFactory;
  * Disruptor例子
  * jerry li
  */
-public class DisruptorDSLExample {
+public class DisruptorDSLExampleWithSingleProducer {
 
   /**
    * 用户自定义事件
@@ -74,9 +74,9 @@ public class DisruptorDSLExample {
 
     disruptor = new Disruptor<ExampleEvent>(
         new ExampleEventFactory(),  // 用于创建环形缓冲中对象的工厂
-        32,  // 环形缓冲的大小
+        8,  // 环形缓冲的大小
         threadFactory,  // 用于事件处理的线程工厂
-        ProducerType.MULTI, // 生产者类型，单vs多生产者
+        ProducerType.SINGLE, // 生产者类型，单vs多生产者
         new BlockingWaitStrategy()); // 等待环形缓冲游标的等待策略，这里使用阻塞模式，也是Disruptor中唯一有锁的地方
 
     // 消费者模拟-日志处理
@@ -143,7 +143,7 @@ public class DisruptorDSLExample {
 
   public static void main(String[] args) {
     final int events = 20; // 必须为偶数
-    DisruptorDSLExample disruptorDSLExample = new DisruptorDSLExample();
+    DisruptorDSLExampleWithSingleProducer disruptorDSLExample = new DisruptorDSLExampleWithSingleProducer();
     final CountDownLatch latch = new CountDownLatch(events);
 
     disruptorDSLExample.createDisruptor(latch);
@@ -154,32 +154,19 @@ public class DisruptorDSLExample {
       @Override
       public void run() {
         int x = 0;
-        while(x++ < events / 2){
+        while(x++ < events){
           disruptor.publishEvent(IntToExampleEventTranslator.INSTANCE, x);
-        }
-      }
-    });
-    // 生产线程1
-    Thread produceThread1 = new Thread(new Runnable() {
-      @Override
-      public void run() {
-        int x = 0;
-        while(x++ < events / 2){
-          disruptor.publishEvent(IntToExampleEventTranslator.INSTANCE, x);
-
         }
       }
     });
 
     produceThread0.start();
-    produceThread1.start();
 
     try {
       latch.await();
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
-
     disruptorDSLExample.shutdown();
   }
 

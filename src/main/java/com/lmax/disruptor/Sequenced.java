@@ -6,6 +6,7 @@ public interface Sequenced
      * The capacity of the data structure to hold entries.
      *
      * @return the size of the RingBuffer.
+     * 获取环形缓冲的大小
      */
     int getBufferSize();
 
@@ -15,6 +16,7 @@ public interface Sequenced
      *
      * @param requiredCapacity in the buffer
      * @return true if the buffer has the capacity to allocate the next sequence otherwise false.
+     * 判断是否含有指定的可用容量
      */
     boolean hasAvailableCapacity(final int requiredCapacity);
 
@@ -22,6 +24,7 @@ public interface Sequenced
      * Get the remaining capacity for this sequencer.
      *
      * @return The number of slots remaining.
+     * 剩余容量
      */
     long remainingCapacity();
 
@@ -29,6 +32,7 @@ public interface Sequenced
      * Claim the next event in sequence for publishing.
      *
      * @return the claimed sequence value
+     * 生产者发布时，申请下一个序号
      */
     long next();
 
@@ -47,6 +51,7 @@ public interface Sequenced
      *
      * @param n the number of sequences to claim
      * @return the highest claimed sequence value
+     * 申请n个序号，用于批量发布
      */
     long next(int n);
 
@@ -57,6 +62,7 @@ public interface Sequenced
      *
      * @return the claimed sequence value
      * @throws InsufficientCapacityException
+     * next()的非阻塞模式
      */
     long tryNext() throws InsufficientCapacityException;
 
@@ -69,6 +75,7 @@ public interface Sequenced
      * @param n the number of sequences to claim
      * @return the claimed sequence value
      * @throws InsufficientCapacityException
+     * next(n)的非阻塞模式
      */
     long tryNext(int n) throws InsufficientCapacityException;
 
@@ -76,6 +83,7 @@ public interface Sequenced
      * Publishes a sequence. Call when the event has been filled.
      *
      * @param sequence
+     * 数据填充后，发布此序号
      */
     void publish(long sequence);
 
@@ -84,6 +92,7 @@ public interface Sequenced
      *
      * @param lo first sequence number to publish
      * @param hi last sequence number to publish
+     * 批量发布序号
      */
     void publish(long lo, long hi);
 }

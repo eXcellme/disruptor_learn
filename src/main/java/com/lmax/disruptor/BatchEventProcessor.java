@@ -26,16 +26,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * is started and just before the thread is shutdown.
  *
  * @param <T> event implementation storing the data for sharing during exchange or parallel coordination of an event.
+ *
+ * 每个EventHandler对应一个EventProcessor执行者，BatchEventProcessor每次大循环可以获取最高可用序号，并循环调用EventHandler
  */
 public final class BatchEventProcessor<T>
     implements EventProcessor
 {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private ExceptionHandler<? super T> exceptionHandler = new FatalExceptionHandler();
-    private final DataProvider<T> dataProvider;
-    private final SequenceBarrier sequenceBarrier;
-    private final EventHandler<? super T> eventHandler;
-    private final Sequence sequence = new Sequence(Sequencer.INITIAL_CURSOR_VALUE);
+    private final DataProvider<T> dataProvider; // 数据提供者，默认是RingBuffer，也可替换为自己的数据结构
+    private final SequenceBarrier sequenceBarrier; // 默认为ProcessingSequenceBarrier
+    private final EventHandler<? super T> eventHandler; // 此EventProcessor对应的用户自定义的EventHandler实现
+    private final Sequence sequence = new Sequence(Sequencer.INITIAL_CURSOR_VALUE); // 当前执行位置
     private final TimeoutHandler timeoutHandler;
     private final BatchStartAware batchStartAware;
 
@@ -137,7 +139,7 @@ public final class BatchEventProcessor<T>
                         eventHandler.onEvent(event, nextSequence, nextSequence == availableSequence);
                         nextSequence++;
                     }
-
+                    // eventHandler处理完毕后，更新当前序号
                     sequence.set(availableSequence);
                 }
                 catch (final TimeoutException e)

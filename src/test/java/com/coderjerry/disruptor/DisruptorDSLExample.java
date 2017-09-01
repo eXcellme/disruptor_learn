@@ -74,7 +74,7 @@ public class DisruptorDSLExample {
 
     disruptor = new Disruptor<ExampleEvent>(
         new ExampleEventFactory(),  // 用于创建环形缓冲中对象的工厂
-        32,  // 环形缓冲的大小
+        8,  // 环形缓冲的大小
         threadFactory,  // 用于事件处理的线程工厂
         ProducerType.MULTI, // 生产者类型，单vs多生产者
         new BlockingWaitStrategy()); // 等待环形缓冲游标的等待策略，这里使用阻塞模式，也是Disruptor中唯一有锁的地方
@@ -173,14 +173,20 @@ public class DisruptorDSLExample {
 
     produceThread0.start();
     produceThread1.start();
-
     try {
-      latch.await();
+      Thread.sleep(500);
     } catch (InterruptedException e) {
       e.printStackTrace();
     }
-
     disruptorDSLExample.shutdown();
+
+//    try {
+//      latch.await();
+//    } catch (InterruptedException e) {
+//      e.printStackTrace();
+//    }
+
+
   }
 
 }

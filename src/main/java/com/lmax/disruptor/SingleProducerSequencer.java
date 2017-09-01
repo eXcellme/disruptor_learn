@@ -136,7 +136,7 @@ public final class SingleProducerSequencer extends SingleProducerSequencerFields
             cursor.setVolatile(nextValue);  // StoreLoad fence
 
             long minSequence;
-            // 无可用坑位，只有当消费者消费，向前移动后，才能跳出循环
+            // 由于慢消费者，无可用坑位，只有当消费者消费，向前移动后，才能跳出循环
             // 由于外层判断使用的是缓存的消费者序列最小值，这里使用真实的消费者序列进行判断，并将最新结果在跳出while循环之后进行缓存
             while (wrapPoint > (minSequence = Util.getMinimumSequence(gatingSequences, nextValue)))
             {   // 唤醒等待的消费者

@@ -43,7 +43,7 @@ public final class BlockingWaitStrategy implements WaitStrategy
                 {
                     barrier.checkAlert();
                     // 循环等待，在Sequencer中publish进行唤醒；等待消费时也会在循环中定时唤醒。
-                    System.out.println(Thread.currentThread().getName() + "消费者无可用消费事件...await...");
+//                    System.out.println(Thread.currentThread().getName() + "消费者无可用消费事件...await...");
                     processorNotifyCondition.await();
                 }
             }

@@ -21,34 +21,30 @@ import sun.misc.Unsafe;
 import com.lmax.disruptor.dsl.ProducerType;
 import com.lmax.disruptor.util.Util;
 
+/*
+ * 填充辅助类，为解决缓存的伪共享问题，需要对每个缓存行(64B)进行填充
+ */
 abstract class RingBufferPad
 {
     protected long p1, p2, p3, p4, p5, p6, p7;
 }
 
-abstract class RingBufferFields<E> extends RingBufferPad
-{
-    private static final int BUFFER_PAD; // 用于缓存行填充的空元素个数
-    private static final long REF_ARRAY_BASE; // 内存中引用数组的开始元素基地址，是数组开始的地址+BUFFER_PAD个元素的偏移量之和，后续元素的内存地址需要在此基础计算地址
-    private static final int REF_ELEMENT_SHIFT; // 引用元素的位移量，用于计算BUFFER_PAD偏移量，基于位移计算比乘法运算更高效
-    private static final Unsafe UNSAFE = Util.getUnsafe(); // 上面的变量都是为了UNSAFE的操作
+abstract class RingBufferFields<E> extends RingBufferPad {
+    public static final int BUFFER_PAD; // 用于缓存行填充的空元素个数
+    public static final long REF_ARRAY_BASE; // 内存中引用数组的开始元素基地址，是数组开始的地址+BUFFER_PAD个元素的偏移量之和，后续元素的内存地址需要在此基础计算地址
+    public static final int REF_ELEMENT_SHIFT; // 引用元素的位移量，用于计算BUFFER_PAD偏移量，基于位移计算比乘法运算更高效
+    public static final Unsafe UNSAFE = Util.getUnsafe(); // 上面的变量都是为了UNSAFE的操作
 
-    static
-    {
-        final int scale = UNSAFE.arrayIndexScale(Object[].class);
-        if (4 == scale)
-        {
+    static {
+        final int scale = UNSAFE.arrayIndexScale(Object[].class); // arrayIndexScale获取数组中一个元素占用的字节数，不同JVM实现可能有不同的大小
+        if (4 == scale) {
             REF_ELEMENT_SHIFT = 2;
-        }
-        else if (8 == scale)
-        {
+        } else if (8 == scale) {
             REF_ELEMENT_SHIFT = 3;
-        }
-        else
-        {
+        } else {
             throw new IllegalStateException("Unknown pointer size");
         }
-        BUFFER_PAD = 128 / scale;
+        BUFFER_PAD = 128 / scale; // 32 or 16
         // Including the buffer pad in the array base offset
         // BUFFER_PAD << REF_ELEMENT_SHIFT 实际上是BUFFER_PAD * scale的等价高效计算方式
         REF_ARRAY_BASE = UNSAFE.arrayBaseOffset(Object[].class) + (BUFFER_PAD << REF_ELEMENT_SHIFT);
@@ -61,16 +57,15 @@ abstract class RingBufferFields<E> extends RingBufferPad
 
     RingBufferFields(
         EventFactory<E> eventFactory,
-        Sequencer sequencer)
-    {
+        Sequencer sequencer) {
         this.sequencer = sequencer;
         this.bufferSize = sequencer.getBufferSize();
 
-        if (bufferSize < 1)
-        {
+        if (bufferSize < 1) {
             throw new IllegalArgumentException("bufferSize must not be less than 1");
         }
-        if (Integer.bitCount(bufferSize) != 1) // Integer.bigCount返回一个整数的二进制形式中1的数量，如Integer.bigCount(128)，就是判断10000000中1的数量。这里用于判断给定bufferSize是否是2的平方
+        if (Integer.bitCount(bufferSize)
+            != 1) // Integer.bigCount返回一个整数的二进制形式中1的数量，如Integer.bigCount(128)，就是判断10000000中1的数量。这里用于判断给定bufferSize是否是2的平方
         {
             throw new IllegalArgumentException("bufferSize must be a power of 2");
         }
@@ -80,18 +75,15 @@ abstract class RingBufferFields<E> extends RingBufferPad
         fill(eventFactory);
     }
 
-    private void fill(EventFactory<E> eventFactory)
-    {
-        for (int i = 0; i < bufferSize; i++)
-        { // 赋值时跳过了BUFFER_PAD个元素，在有效元素的前后各有BUFFER_PAD个空位，用于做缓存行填充
+    private void fill(EventFactory<E> eventFactory) {
+        for (int i = 0; i < bufferSize; i++) { // 赋值时跳过了BUFFER_PAD个元素，在有效元素的前后各有BUFFER_PAD个空位，用于做缓存行填充
             entries[BUFFER_PAD + i] = eventFactory.newInstance();
         }
     }
 
     @SuppressWarnings("unchecked")
-    protected final E elementAt(long sequence)
-    { // 通过序号计算元素在内存中基于entries的偏移位置，以下计算等价于(基地址+求模*单元素偏移量)，计算更高效
-        return (E) UNSAFE.getObject(entries, REF_ARRAY_BASE + ((sequence & indexMask) << REF_ELEMENT_SHIFT));
+    protected final E elementAt(long sequence) { // 通过序号计算元素在内存中基于entries的偏移位置，以下计算等价于(基地址+求模*单元素偏移量)，计算更高效
+        return (E)UNSAFE.getObject(entries, REF_ARRAY_BASE + ((sequence & indexMask) << REF_ELEMENT_SHIFT));
     }
 }
 
@@ -99,11 +91,13 @@ abstract class RingBufferFields<E> extends RingBufferPad
  * Ring based store of reusable entries containing the data representing
  * an event being exchanged between event producer and {@link EventProcessor}s.
  *
+ * 环形缓冲，1 存储可重用实体 2 每个实体代表一个事件，该事件用于在生产者和事件处理器中传递数据
+ *
  * @param <E> implementation storing the data for sharing during exchange or parallel coordination of an event.
  */
 public final class RingBuffer<E> extends RingBufferFields<E> implements Cursored, EventSequencer<E>, EventSink<E>
 {
-    public static final long INITIAL_CURSOR_VALUE = Sequence.INITIAL_VALUE;
+    public static final long INITIAL_CURSOR_VALUE = Sequence.INITIAL_VALUE; // 游标初始值 -1
     protected long p1, p2, p3, p4, p5, p6, p7;
 
     /**
@@ -1116,4 +1110,5 @@ public final class RingBuffer<E> extends RingBufferFields<E> implements Cursored
             ", sequencer=" + sequencer +
             "}";
     }
+
 }
